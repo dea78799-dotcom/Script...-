@@ -3,7 +3,7 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 -- [[ CỬA SỔ CHÍNH ]]
 local Window = Rayfield:CreateWindow({
-   Name = "🧠 Brainrot Hub v4.0",
+   Name = "🧠 Brainrot Hub v4.1",
    Icon = 0,
    LoadingTitle = "Đang tải...",
    LoadingSubtitle = "by Assistant",
@@ -196,14 +196,42 @@ UpgradeTab:CreateButton({
 })
 
 -- ============================
--- TAB 3: BÁN BRAINROT
+-- TAB 3: BÁN BRAINROT (có bay đến vị trí)
 -- ============================
 local SellTab = Window:CreateTab("Bán Brainrot", 4483362458)
+
+-- Vị trí bán (lấy 3 số đầu)
+local sellPos = Vector3.new(-78.43927, -0.374992371, 505.715668)
+
+-- Hàm bay đến vị trí bán và chờ 0.3s
+local function flyToSellPosition()
+    local char = getCharacter()
+    local hrp = char:WaitForChild("HumanoidRootPart")
+    local humanoid = char:WaitForChild("Humanoid")
+    humanoid:ChangeState(Enum.HumanoidStateType.Flying)
+    local tween = TweenService:Create(hrp, TweenInfo.new(2.5, Enum.EasingStyle.Linear), {
+        CFrame = CFrame.new(sellPos) * (hrp.CFrame - hrp.Position)
+    })
+    tween:Play()
+    tween.Completed:Wait()
+    task.wait(0.3) -- chờ 0.3s
+end
+
+SellTab:CreateButton({
+   Name = "💰 Kiểm tra giá trị Brainrot",
+   Callback = function()
+       local Remotes = getRemotes()
+       flyToSellPosition()
+       local worth = Remotes.RequestBrainrotWorth:InvokeServer()
+       Rayfield:Notify({Title = "💰", Content = "Giá trị: $" .. tostring(worth or 0), Duration = 5})
+   end
+})
 
 SellTab:CreateButton({
    Name = "💸 Bán 1 con đang cầm",
    Callback = function()
        local Remotes = getRemotes()
+       flyToSellPosition()
        local worth = Remotes.RequestBrainrotWorth:InvokeServer()
        Remotes.RequestSellHeldBrainrot:FireServer()
        Rayfield:Notify({Title = "💸", Content = "Đã bán 1 con (giá: $" .. tostring(worth or 0) .. ")", Duration = 4})
@@ -214,6 +242,7 @@ SellTab:CreateButton({
    Name = "🗑️ Bán tất cả trong túi",
    Callback = function()
        local Remotes = getRemotes()
+       flyToSellPosition()
        Remotes.RequestSellInventoryBrainrots:FireServer()
        Rayfield:Notify({Title = "🗑️", Content = "Đã bán tất cả!", Duration = 3})
    end
@@ -234,6 +263,7 @@ SellTab:CreateButton({
        })
        task.spawn(function()
            while isRunning do
+               flyToSellPosition()
                local worth = Remotes.RequestBrainrotWorth:InvokeServer()
                if worth and worth > 0 then
                    Remotes.RequestSellHeldBrainrot:FireServer()
@@ -251,7 +281,7 @@ SellTab:CreateButton({
 
 SellTab:CreateParagraph({
     Title = "📌 HƯỚNG DẪN",
-    Content = "• Phải cầm Brainrot trên tay mới bán được từng con\n• 'Bán tất cả' bán toàn bộ trong túi\n• Tự động bán sẽ dừng khi hết Brainrot"
+    Content = "• Tự động bay đến NPC bán trước khi kiểm tra/bán\n• 'Bán tất cả' cũng bay đến vị trí\n• Tự động bán sẽ dừng khi hết Brainrot"
 })
 
 -- ============================
@@ -277,7 +307,6 @@ TrainTab:CreateToggle({
               local remote = game:GetService("ReplicatedStorage"):WaitForChild("Remotes"):WaitForChild("AuraMultiplierClicked")
 
               while _G_AutoTrain do
-                  -- Xử lý nhân vật
                   local char = plr.Character
                   if not char or not char.Parent then
                       char = plr.CharacterAdded:Wait()
@@ -289,7 +318,6 @@ TrainTab:CreateToggle({
                       break
                   end
 
-                  -- Tìm Aura
                   local aura = plr.Backpack:FindFirstChild("Aura")
                   if not aura then
                       aura = char:FindFirstChild("Aura")
@@ -300,7 +328,6 @@ TrainTab:CreateToggle({
                       task.wait(0.2)
                   end
 
-                  -- Gửi gói train
                   if remote then
                       local id = math.random(10000000000, 99999999999)
                       local float = math.random() * 10000
@@ -337,4 +364,4 @@ TrainTab:CreateSlider({
    end
 })
 
-print("✅ Brainrot Hub v4.0 đã sẵn sàng!")
+print("✅ Brainrot Hub v4.1 đã sẵn sàng!")
