@@ -3,7 +3,7 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 -- [[ CỬA SỔ CHÍNH ]]
 local Window = Rayfield:CreateWindow({
-   Name = "🧠 Brainrot Hub v4.1",
+   Name = "🧠 Brainrot Hub v5.4",
    Icon = 0,
    LoadingTitle = "Đang tải...",
    LoadingSubtitle = "by Assistant",
@@ -34,12 +34,30 @@ local function getRemotes()
     return ReplicatedStorage:WaitForChild("Remotes", 5)
 end
 
+local function getEvents()
+    return ReplicatedStorage:WaitForChild("Events", 5)
+end
+
 local function getCharacter()
     local char = player.Character
     if not char or not char.Parent then
         char = player.CharacterAdded:Wait()
     end
     return char
+end
+
+-- Hàm bay chung
+local function flyTo(pos, duration)
+    duration = duration or 2.5
+    local char = getCharacter()
+    local hrp = char:WaitForChild("HumanoidRootPart")
+    local humanoid = char:WaitForChild("Humanoid")
+    humanoid:ChangeState(Enum.HumanoidStateType.Flying)
+    local tween = TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {
+        CFrame = CFrame.new(pos) * (hrp.CFrame - hrp.Position)
+    })
+    tween:Play()
+    tween.Completed:Wait()
 end
 
 -- ============================
@@ -196,25 +214,15 @@ UpgradeTab:CreateButton({
 })
 
 -- ============================
--- TAB 3: BÁN BRAINROT (có bay đến vị trí)
+-- TAB 3: BÁN BRAINROT
 -- ============================
 local SellTab = Window:CreateTab("Bán Brainrot", 4483362458)
 
--- Vị trí bán (lấy 3 số đầu)
 local sellPos = Vector3.new(-78.43927, -0.374992371, 505.715668)
 
--- Hàm bay đến vị trí bán và chờ 0.3s
 local function flyToSellPosition()
-    local char = getCharacter()
-    local hrp = char:WaitForChild("HumanoidRootPart")
-    local humanoid = char:WaitForChild("Humanoid")
-    humanoid:ChangeState(Enum.HumanoidStateType.Flying)
-    local tween = TweenService:Create(hrp, TweenInfo.new(2.5, Enum.EasingStyle.Linear), {
-        CFrame = CFrame.new(sellPos) * (hrp.CFrame - hrp.Position)
-    })
-    tween:Play()
-    tween.Completed:Wait()
-    task.wait(0.3) -- chờ 0.3s
+    flyTo(sellPos, 2.5)
+    task.wait(0.3)
 end
 
 SellTab:CreateButton({
@@ -285,7 +293,7 @@ SellTab:CreateParagraph({
 })
 
 -- ============================
--- TAB 4: AUTO TRAIN (AURA)
+-- TAB 4: AUTO TRAIN
 -- ============================
 local TrainTab = Window:CreateTab("Auto Train", 4483362458)
 
@@ -364,4 +372,174 @@ TrainTab:CreateSlider({
    end
 })
 
-print("✅ Brainrot Hub v4.1 đã sẵn sàng!")
+-- ============================
+-- TAB 5: MUA ĐỒ (BLAST STYLES)
+-- ============================
+local ShopTab = Window:CreateTab("Mua Đồ", 4483362458)
+
+local buyPos = Vector3.new(-133.639587, -2.40998483, 523.576233)
+
+local function flyToBuyPosition()
+    flyTo(buyPos, 2.5)
+    task.wait(0.3)
+end
+
+-- Hàm mua style chung
+local function buyStyle(styleId, styleName, toggleFlag)
+    local Remotes = getRemotes()
+    local BlastStyleAction = Remotes:FindFirstChild("BlastStyleAction")
+    if not BlastStyleAction then
+        Rayfield:Notify({Title = "❌", Content = "Không tìm thấy remote BlastStyleAction!", Duration = 4})
+        setToggleState(toggleFlag, false)
+        return
+    end
+
+    flyToBuyPosition()
+
+    local success, result = pcall(function()
+        return BlastStyleAction:InvokeServer({
+            action = "buyCash",
+            styleId = styleId
+        })
+    end)
+
+    if success and result then
+        if result.success == true then
+            Rayfield:Notify({Title = "✅", Content = "Mua thành công " .. styleName .. "!", Duration = 5})
+        else
+            local reason = "Không rõ lý do"
+            if result.shouldPromptGamePass then
+                reason = "Cần mua GamePass hoặc thiếu tiền"
+            elseif result.data and result.data.stylesById and result.data.stylesById[styleId] then
+                local style = result.data.stylesById[styleId]
+                if style.owned then
+                    reason = "Bạn đã sở hữu style này rồi!"
+                elseif not style.affordable then
+                    reason = "Không đủ tiền hoặc chưa đủ điều kiện"
+                else
+                    reason = "Mua thất bại, vui lòng thử lại"
+                end
+            else
+                reason = "Dữ liệu trả về không hợp lệ"
+            end
+            Rayfield:Notify({Title = "❌", Content = "Mua thất bại: " .. reason, Duration = 5})
+        end
+    else
+        Rayfield:Notify({Title = "❌", Content = "Lỗi khi gọi remote: " .. tostring(success and "unknown" or "pcall failed"), Duration = 4})
+    end
+
+    setToggleState(toggleFlag, false)
+end
+
+-- Toggle mua Purple
+ShopTab:CreateToggle({
+    Name = "🛒 Mua Blast Style Purple",
+    CurrentValue = false,
+    Flag = "ToggleBuyPurple",
+    Callback = function(Value)
+        if Value then
+            task.spawn(function()
+                buyStyle("Purple", "True Purple Blast Style", "ToggleBuyPurple")
+            end)
+        end
+    end
+})
+
+-- Toggle mua Flame Arrow
+ShopTab:CreateToggle({
+    Name = "🛒 Mua Blast Style Flame Arrow",
+    CurrentValue = false,
+    Flag = "ToggleBuyFlameArrow",
+    Callback = function(Value)
+        if Value then
+            task.spawn(function()
+                buyStyle("FlameArrow", "Flame Arrow Blast Style", "ToggleBuyFlameArrow")
+            end)
+        end
+    end
+})
+
+-- Toggle mua Divine Slash
+ShopTab:CreateToggle({
+    Name = "🛒 Mua Blast Style Divine Slash",
+    CurrentValue = false,
+    Flag = "ToggleBuyDivineSlash",
+    Callback = function(Value)
+        if Value then
+            task.spawn(function()
+                buyStyle("DivineSlash", "Divine Slash Blast Style", "ToggleBuyDivineSlash")
+            end)
+        end
+    end
+})
+
+-- Toggle mua Independence Smash
+ShopTab:CreateToggle({
+    Name = "🛒 Mua Blast Style Independence Smash",
+    CurrentValue = false,
+    Flag = "ToggleBuyIndependenceSmash",
+    Callback = function(Value)
+        if Value then
+            task.spawn(function()
+                buyStyle("IndependenceSmash", "Independence Smash Blast Style", "ToggleBuyIndependenceSmash")
+            end)
+        end
+    end
+})
+
+ShopTab:CreateParagraph({
+    Title = "📌 HƯỚNG DẪN",
+    Content = "• Bật toggle để bay đến NPC và mua style tương ứng\n• Chỉ mua 1 lần, sau đó tự động tắt\n• Cần có đủ tiền (1Qi) và đạt điều kiện"
+})
+
+-- ============================
+-- TAB 6: VÒNG QUAY MIỄN PHÍ
+-- ============================
+local SpinTab = Window:CreateTab("Vòng Quay", 4483362458)
+
+local spinPos = Vector3.new(105.983093, -0.318742752, 525.639038)
+
+local function flyToSpinPosition()
+    flyTo(spinPos, 2.5)
+    task.wait(0.2) -- chờ 0.2s theo yêu cầu
+end
+
+SpinTab:CreateToggle({
+    Name = "🎡 Quay vòng quay miễn phí",
+    CurrentValue = false,
+    Flag = "ToggleSpin",
+    Callback = function(Value)
+        if Value then
+            task.spawn(function()
+                local Events = getEvents()
+                local RequestSpin = Events:FindFirstChild("RequestSpin")
+                if not RequestSpin then
+                    Rayfield:Notify({Title = "❌", Content = "Không tìm thấy RequestSpin!", Duration = 4})
+                    setToggleState("ToggleSpin", false)
+                    return
+                end
+
+                flyToSpinPosition()
+
+                local success, result = pcall(function()
+                    return RequestSpin:InvokeServer()
+                end)
+
+                if success then
+                    Rayfield:Notify({Title = "🎡", Content = "Quay thành công! Phần thưởng đã được nhận.", Duration = 5})
+                else
+                    Rayfield:Notify({Title = "❌", Content = "Lỗi khi quay: " .. tostring(result), Duration = 4})
+                end
+
+                setToggleState("ToggleSpin", false)
+            end)
+        end
+    end
+})
+
+SpinTab:CreateParagraph({
+    Title = "📌 HƯỚNG DẪN",
+    Content = "• Bật toggle để bay đến vị trí quay và thực hiện quay miễn phí\n• Chỉ dùng được 1 lần mỗi ngày (theo game)\n• Toggle sẽ tự tắt sau khi quay"
+})
+
+print("✅ Brainrot Hub v5.4 đã sẵn sàng!")
