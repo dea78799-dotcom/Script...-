@@ -3,7 +3,7 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 -- [[ CỬA SỔ CHÍNH ]]
 local Window = Rayfield:CreateWindow({
-   Name = "🧠 Brainrot Hub v5.4",
+   Name = "🧠 Brainrot Hub v5.5",
    Icon = 0,
    LoadingTitle = "Đang tải...",
    LoadingSubtitle = "by Assistant",
@@ -373,7 +373,7 @@ TrainTab:CreateSlider({
 })
 
 -- ============================
--- TAB 5: MUA ĐỒ (BLAST STYLES)
+-- TAB 5: MUA ĐỒ
 -- ============================
 local ShopTab = Window:CreateTab("Mua Đồ", 4483362458)
 
@@ -384,7 +384,6 @@ local function flyToBuyPosition()
     task.wait(0.3)
 end
 
--- Hàm mua style chung
 local function buyStyle(styleId, styleName, toggleFlag)
     local Remotes = getRemotes()
     local BlastStyleAction = Remotes:FindFirstChild("BlastStyleAction")
@@ -431,7 +430,6 @@ local function buyStyle(styleId, styleName, toggleFlag)
     setToggleState(toggleFlag, false)
 end
 
--- Toggle mua Purple
 ShopTab:CreateToggle({
     Name = "🛒 Mua Blast Style Purple",
     CurrentValue = false,
@@ -445,7 +443,6 @@ ShopTab:CreateToggle({
     end
 })
 
--- Toggle mua Flame Arrow
 ShopTab:CreateToggle({
     Name = "🛒 Mua Blast Style Flame Arrow",
     CurrentValue = false,
@@ -459,7 +456,6 @@ ShopTab:CreateToggle({
     end
 })
 
--- Toggle mua Divine Slash
 ShopTab:CreateToggle({
     Name = "🛒 Mua Blast Style Divine Slash",
     CurrentValue = false,
@@ -473,7 +469,6 @@ ShopTab:CreateToggle({
     end
 })
 
--- Toggle mua Independence Smash
 ShopTab:CreateToggle({
     Name = "🛒 Mua Blast Style Independence Smash",
     CurrentValue = false,
@@ -489,11 +484,11 @@ ShopTab:CreateToggle({
 
 ShopTab:CreateParagraph({
     Title = "📌 HƯỚNG DẪN",
-    Content = "• Bật toggle để bay đến NPC và mua style tương ứng\n• Chỉ mua 1 lần, sau đó tự động tắt\n• Cần có đủ tiền (1Qi) và đạt điều kiện"
+    Content = "• Bật toggle để bay đến NPC và mua style tương ứng\n• Chỉ mua 1 lần, sau đó tự động tắt"
 })
 
 -- ============================
--- TAB 6: VÒNG QUAY MIỄN PHÍ
+-- TAB 6: VÒNG QUAY
 -- ============================
 local SpinTab = Window:CreateTab("Vòng Quay", 4483362458)
 
@@ -501,7 +496,7 @@ local spinPos = Vector3.new(105.983093, -0.318742752, 525.639038)
 
 local function flyToSpinPosition()
     flyTo(spinPos, 2.5)
-    task.wait(0.2) -- chờ 0.2s theo yêu cầu
+    task.wait(0.2)
 end
 
 SpinTab:CreateToggle({
@@ -542,4 +537,40 @@ SpinTab:CreateParagraph({
     Content = "• Bật toggle để bay đến vị trí quay và thực hiện quay miễn phí\n• Chỉ dùng được 1 lần mỗi ngày (theo game)\n• Toggle sẽ tự tắt sau khi quay"
 })
 
-print("✅ Brainrot Hub v5.4 đã sẵn sàng!")
+-- ============================
+-- TAB 7: DỊCH CHUYỂN (không thêm tab mới sau này)
+-- ============================
+local TeleportTab = Window:CreateTab("Dịch Chuyển", 4483362458)
+
+-- Vị trí bảng xếp hạng
+local leaderboardPos = Vector3.new(-16.9269562, -3.1833272, 452.281982)
+
+-- Vị trí người chơi mạnh nhất
+local strongestPlayerPos = Vector3.new(141.363464, -2.42998457, 513.962036)
+
+TeleportTab:CreateButton({
+    Name = "📊 Xem bảng xếp hạng",
+    Callback = function()
+        task.spawn(function()
+            flyTo(leaderboardPos, 2.5)
+            Rayfield:Notify({Title = "📊", Content = "Đã bay đến bảng xếp hạng!", Duration = 3})
+        end)
+    end
+})
+
+TeleportTab:CreateButton({
+    Name = "🏆 Xem người chơi mạnh nhất",
+    Callback = function()
+        task.spawn(function()
+            flyTo(strongestPlayerPos, 2.5)
+            Rayfield:Notify({Title = "🏆", Content = "Đã bay đến người chơi mạnh nhất!", Duration = 3})
+        end)
+    end
+})
+
+TeleportTab:CreateParagraph({
+    Title = "📌 HƯỚNG DẪN",
+    Content = "• Bấm nút để bay đến vị trí tương ứng\n• Không thêm tab mới ngoài yêu cầu"
+})
+
+print("✅ Brainrot Hub v5.5 đã sẵn sàng!")
