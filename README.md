@@ -3,7 +3,7 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 -- [[ CỬA SỔ CHÍNH ]]
 local Window = Rayfield:CreateWindow({
-   Name = "🧠 Brainrot Hub v5.5",
+   Name = "🧠 Brainrot Hub v6.0",
    Icon = 0,
    LoadingTitle = "Đang tải...",
    LoadingSubtitle = "by Assistant",
@@ -24,6 +24,8 @@ local _G_AutoMoney = false
 local _G_UpgradeLevel = 2
 local _G_AutoTrain = false
 local _G_TrainInterval = 0.1
+local _G_AutoRebirth = false
+local _G_RebirthInterval = 5
 
 -- HÀM TIỆN
 local function setToggleState(flag, value)
@@ -60,6 +62,17 @@ local function flyTo(pos, duration)
     tween.Completed:Wait()
 end
 
+-- Hàm gọi rebirth
+local function requestRebirth()
+    local Events = getEvents()
+    local RequestRebirth = Events:FindFirstChild("RequestRebirth")
+    if not RequestRebirth then
+        return false
+    end
+    RequestRebirth:FireServer()
+    return true
+end
+
 -- ============================
 -- TAB 1: AUTO FARM
 -- ============================
@@ -67,7 +80,7 @@ local FarmTab = Window:CreateTab("Auto Farm", 4483362458)
 
 FarmTab:CreateParagraph({
     Title = "⚠️ LƯU Ý",
-    Content = "Không bật 2 tính năng cùng lúc (sẽ tự tắt cái còn lại)."
+    Content = "Không bật 2 tính năng farm cùng lúc (sẽ tự tắt cái còn lại)."
 })
 
 -- Auto Brainrot
@@ -160,6 +173,52 @@ FarmTab:CreateToggle({
           end)
       end
    end,
+})
+
+-- ===== TÁI SINH =====
+FarmTab:CreateParagraph({
+    Title = "🔄 TÁI SINH (Rebirth)",
+    Content = "Gửi lệnh rebirth mỗi X giây."
+})
+
+FarmTab:CreateButton({
+    Name = "🔄 Tái sinh 1 lần",
+    Callback = function()
+        if requestRebirth() then
+            Rayfield:Notify({Title = "🔄", Content = "Đã gửi lệnh tái sinh!", Duration = 3})
+        else
+            Rayfield:Notify({Title = "❌", Content = "Không tìm thấy RequestRebirth!", Duration = 3})
+        end
+    end
+})
+
+FarmTab:CreateSlider({
+    Name = "Khoảng cách tái sinh (giây)",
+    Range = {1, 60},
+    Increment = 1,
+    Suffix = "s",
+    CurrentValue = 5,
+    Flag = "RebirthInterval",
+    Callback = function(Value)
+        _G_RebirthInterval = Value
+    end
+})
+
+FarmTab:CreateToggle({
+    Name = "♻️ Tự động tái sinh",
+    CurrentValue = false,
+    Flag = "ToggleAutoRebirth",
+    Callback = function(Value)
+        _G_AutoRebirth = Value
+        if _G_AutoRebirth then
+            task.spawn(function()
+                while _G_AutoRebirth do
+                    requestRebirth()
+                    task.wait(_G_RebirthInterval)
+                end
+            end)
+        end
+    end
 })
 
 -- ============================
@@ -373,17 +432,27 @@ TrainTab:CreateSlider({
 })
 
 -- ============================
--- TAB 5: MUA ĐỒ
+-- TAB 5: MUA ĐỒ (CẬP NHẬT LỚN)
 -- ============================
 local ShopTab = Window:CreateTab("Mua Đồ", 4483362458)
 
+-- Vị trí mua Blast Style (cũ)
 local buyPos = Vector3.new(-133.639587, -2.40998483, 523.576233)
+
+-- Vị trí mua Aura (mới)
+local shopAuraPos = Vector3.new(33.5341225, -0.37499249, 503.479218)
 
 local function flyToBuyPosition()
     flyTo(buyPos, 2.5)
     task.wait(0.3)
 end
 
+local function flyToShopAura()
+    flyTo(shopAuraPos, 2.5)
+    task.wait(0.3)
+end
+
+-- Hàm mua Blast Style
 local function buyStyle(styleId, styleName, toggleFlag)
     local Remotes = getRemotes()
     local BlastStyleAction = Remotes:FindFirstChild("BlastStyleAction")
@@ -429,6 +498,12 @@ local function buyStyle(styleId, styleName, toggleFlag)
 
     setToggleState(toggleFlag, false)
 end
+
+-- ===== PHẦN 1: MUA BLAST STYLE =====
+ShopTab:CreateParagraph({
+    Title = "💥 MUA BLAST STYLE",
+    Content = "Các style vụ nổ – bay đến shop cũ."
+})
 
 ShopTab:CreateToggle({
     Name = "🛒 Mua Blast Style Purple",
@@ -482,9 +557,56 @@ ShopTab:CreateToggle({
     end
 })
 
+-- ===== PHẦN 2: MUA AURA (16 RARITY) =====
+ShopTab:CreateParagraph({
+    Title = "✨ MUA AURA",
+    Content = "Mua Aura theo rarity – bay đến shop Aura."
+})
+
+-- Danh sách các rarity
+local auraRarities = {
+    "Common", "Uncommon", "Rare", "Epic", "Legendary", "Mythic",
+    "Secret", "Ancient", "Celestial", "Divine", "OG", "Godly",
+    "Omega", "Immortal", "End", "Everlast"
+}
+
+-- Hàm mua Aura
+local function buyAura(rarity)
+    local Remotes = getRemotes()
+    local RequestAuraPurchase = Remotes:FindFirstChild("RequestAuraPurchase")
+    if not RequestAuraPurchase then
+        Rayfield:Notify({Title = "❌", Content = "Không tìm thấy RequestAuraPurchase!", Duration = 4})
+        return
+    end
+
+    flyToShopAura()
+
+    local success, result = pcall(function()
+        return RequestAuraPurchase:InvokeServer(rarity)
+    end)
+
+    if success then
+        Rayfield:Notify({Title = "✅", Content = "Đã mua Aura " .. rarity .. "!", Duration = 4})
+    else
+        Rayfield:Notify({Title = "❌", Content = "Lỗi mua Aura " .. rarity .. ": " .. tostring(result), Duration = 4})
+    end
+end
+
+-- Tạo 16 nút mua Aura
+for _, rarity in ipairs(auraRarities) do
+    ShopTab:CreateButton({
+        Name = "🛒 Mua Aura " .. rarity,
+        Callback = function()
+            task.spawn(function()
+                buyAura(rarity)
+            end)
+        end
+    })
+end
+
 ShopTab:CreateParagraph({
     Title = "📌 HƯỚNG DẪN",
-    Content = "• Bật toggle để bay đến NPC và mua style tương ứng\n• Chỉ mua 1 lần, sau đó tự động tắt"
+    Content = "• Mỗi nút mua một Aura rarity tương ứng\n• Tất cả đều bay đến vị trí shop Aura trước khi gọi remote"
 })
 
 -- ============================
@@ -538,14 +660,11 @@ SpinTab:CreateParagraph({
 })
 
 -- ============================
--- TAB 7: DỊCH CHUYỂN (không thêm tab mới sau này)
+-- TAB 7: DỊCH CHUYỂN
 -- ============================
 local TeleportTab = Window:CreateTab("Dịch Chuyển", 4483362458)
 
--- Vị trí bảng xếp hạng
-local leaderboardPos = Vector3.new(-16.9269562, -3.1833272, 452.281982)
-
--- Vị trí người chơi mạnh nhất
+local leaderboardPos = Vector3.new(170.230042, 12.0595999, 461.961761)
 local strongestPlayerPos = Vector3.new(141.363464, -2.42998457, 513.962036)
 
 TeleportTab:CreateButton({
@@ -570,7 +689,7 @@ TeleportTab:CreateButton({
 
 TeleportTab:CreateParagraph({
     Title = "📌 HƯỚNG DẪN",
-    Content = "• Bấm nút để bay đến vị trí tương ứng\n• Không thêm tab mới ngoài yêu cầu"
+    Content = "• Bấm nút để bay đến vị trí tương ứng"
 })
 
-print("✅ Brainrot Hub v5.5 đã sẵn sàng!")
+print("✅ Brainrot Hub v6.0 đã sẵn sàng!")
