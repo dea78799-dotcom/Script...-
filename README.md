@@ -3,7 +3,7 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 -- [[ CỬA SỔ CHÍNH ]]
 local Window = Rayfield:CreateWindow({
-   Name = "🧠 Brainrot Hub v7.8",
+   Name = "🧠 Brainrot Hub v8.5 vip",
    Icon = 0,
    LoadingTitle = "Đang tải...",
    LoadingSubtitle = "by Assistant",
