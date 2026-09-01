@@ -3,7 +3,7 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 -- [[ CỬA SỔ CHÍNH ]]
 local Window = Rayfield:CreateWindow({
-   Name = "🧠 Brainrot Hub v8.5 vip",
+   Name = "🧠 Brainrot Hub v7.8",
    Icon = 0,
    LoadingTitle = "Đang tải...",
    LoadingSubtitle = "by Assistant",
@@ -933,6 +933,41 @@ TeleportTab:CreateButton({
     end
 })
 
+-- ===== THÊM 3 NÚT MỚI: NHÀ 5 TẦNG 2, TẦNG 3, TẦNG 4 =====
+TeleportTab:CreateButton({
+    Name = "🏠 Nhà 5 Tầng 2",
+    Callback = function()
+        task.spawn(function()
+            if flyTo(Vector3.new(135.958557, 26.8893967, 396.55542), 2.5) then
+                Rayfield:Notify({Title = "🏠", Content = "Đã bay đến Nhà 5 Tầng 2!", Duration = 3})
+            end
+        end)
+    end
+})
+
+TeleportTab:CreateButton({
+    Name = "🏠 Nhà 5 Tầng 3",
+    Callback = function()
+        task.spawn(function()
+            if flyTo(Vector3.new(135.958557, 56.8093948, 396.55542), 2.5) then
+                Rayfield:Notify({Title = "🏠", Content = "Đã bay đến Nhà 5 Tầng 3!", Duration = 3})
+            end
+        end)
+    end
+})
+
+TeleportTab:CreateButton({
+    Name = "🏠 Nhà 5 Tầng 4",
+    Callback = function()
+        task.spawn(function()
+            if flyTo(Vector3.new(135.978546, 86.7393951, 396.55542), 2.5) then
+                Rayfield:Notify({Title = "🏠", Content = "Đã bay đến Nhà 5 Tầng 4!", Duration = 3})
+            end
+        end)
+    end
+})
+-- ===== KẾT THÚC THÊM NÚT =====
+
 TeleportTab:CreateButton({
     Name = "⚡ Bảng xếp hạng Raid nhanh nhất",
     Callback = function()
@@ -1183,7 +1218,7 @@ EventTab:CreateParagraph({
 })
 
 -- ============================
--- TAB 9: RAID (CHIẾN ĐẤU + AUTO BAY ĐẾN NPC) - PHIÊN BẢN CUỐI CÙNG
+-- TAB 9: RAID (CHIẾN ĐẤU + AUTO BAY ĐẾN NPC) - PHIÊN BẢN CUỐI CÙNG (ƯU TIÊN QUÁI THƯỜNG)
 -- ============================
 local RaidTab = Window:CreateTab("RAID", 4483362458)
 
@@ -1208,9 +1243,8 @@ local function flyToSafePosition()
     end
 end
 
--- Tìm NPC hoặc boss còn sống, trả về model và part (bất kỳ BasePart)
-local function findAliveNPC()
-    -- Tìm NPC thường
+-- Tìm NPC thường còn sống (Evil Tung Sahur_x)
+local function findAliveRegularNPC()
     for i = 1, 200 do
         local targetName = "Evil Tung Sahur_" .. i
         for _, obj in pairs(Workspace:GetDescendants()) do
@@ -1223,8 +1257,12 @@ local function findAliveNPC()
             end
         end
     end
+    return nil, nil
+end
 
-    -- Tìm boss John Pork
+-- Tìm boss John Pork còn sống
+local function findAliveBoss()
+    -- Tìm trực tiếp trong Workspace
     local boss = Workspace:FindFirstChild("John Pork")
     if boss and boss:IsA("Model") then
         local hrp = boss:FindFirstChild("HumanoidRootPart")
@@ -1234,7 +1272,7 @@ local function findAliveNPC()
         end
     end
 
-    -- Tìm boss trong descendants (nếu không phải con trực tiếp)
+    -- Tìm trong descendants
     for _, obj in pairs(Workspace:GetDescendants()) do
         if obj:IsA("Model") and obj.Name == "John Pork" then
             local hrp = obj:FindFirstChild("HumanoidRootPart")
@@ -1244,7 +1282,6 @@ local function findAliveNPC()
             end
         end
     end
-
     return nil, nil
 end
 
@@ -1418,10 +1455,10 @@ RaidTab:CreateButton({
     end
 })
 
--- ===== AUTO RAID (BAY MƯỢT, BAY LIÊN TỤC, TỰ ĐỘNG LẶP ĐỢT) =====
+-- ===== AUTO RAID (BAY MƯỢT, BAY LIÊN TỤC, ƯU TIÊN QUÁI THƯỜNG) =====
 RaidTab:CreateParagraph({
     Title = "🤖 AUTO RAID",
-    Content = "Bay mượt liên tục bám theo NPC hoặc Boss, nhìn thẳng vào mục tiêu, đánh đến chết rồi tự chuyển sang con tiếp theo. Khi hết quái, tự bay về vị trí an toàn đã chọn và chờ đợt mới. Không bao giờ dừng bay. NoClip chỉ bật khi có mục tiêu để tránh té xuống đất."
+    Content = "Bay mượt liên tục bám theo mục tiêu, nhìn thẳng vào mục tiêu, đánh đến chết rồi tự chuyển. ƯU TIÊN đánh quái thường (Evil Tung Sahur_x) trước, chỉ khi không còn quái thường mới đánh boss John Pork. Khi hết quái, tự bay về vị trí an toàn đã chọn và chờ đợt mới. NoClip chỉ bật khi có mục tiêu để tránh té xuống đất."
 })
 
 RaidTab:CreateToggle({
@@ -1469,18 +1506,23 @@ RaidTab:CreateToggle({
                     end
                 end
 
-                local lastNPCName = nil
+                local lastTargetName = nil
                 local lastAttackTime = 0
 
                 while isAutoRaidRunning do
-                    -- Tìm NPC hoặc boss còn sống
-                    local npc, npcPart = findAliveNPC()
-                    if not npc or not npcPart then
+                    -- Ưu tiên tìm quái thường trước
+                    local target, targetPart = findAliveRegularNPC()
+                    if not target or not targetPart then
+                        -- Nếu không còn quái thường, tìm boss
+                        target, targetPart = findAliveBoss()
+                    end
+
+                    if not target or not targetPart then
                         -- Không có mục tiêu: TẮT NOCLIP, bay về vị trí an toàn
                         setNoclip(false)
-                        if lastNPCName ~= nil then
+                        if lastTargetName ~= nil then
                             Rayfield:Notify({ Title = "⏳", Content = "Đã hết quái, bay về vị trí an toàn...", Duration = 2 })
-                            lastNPCName = nil
+                            lastTargetName = nil
                         end
 
                         local distanceToSafe = (hrp.Position - safePosition).Magnitude
@@ -1498,26 +1540,26 @@ RaidTab:CreateToggle({
                     setNoclip(true)
 
                     -- Kiểm tra mục tiêu còn sống không
-                    if not npc.Parent or not npc:FindFirstChildWhichIsA("BasePart") then
+                    if not target.Parent or not target:FindFirstChildWhichIsA("BasePart") then
                         continue
                     end
 
                     -- Hiển thị tên mục tiêu khi chuyển mục tiêu
-                    if lastNPCName ~= npc.Name then
-                        Rayfield:Notify({ Title = "✈️", Content = "Bay đến " .. npc.Name .. "...", Duration = 2 })
-                        lastNPCName = npc.Name
+                    if lastTargetName ~= target.Name then
+                        Rayfield:Notify({ Title = "✈️", Content = "Bay đến " .. target.Name .. "...", Duration = 2 })
+                        lastTargetName = target.Name
                     end
 
                     -- Cập nhật vị trí bay phía sau lưng mục tiêu
-                    local npcCFrame = npcPart.CFrame
+                    local targetCFrame = targetPart.CFrame
                     local behindOffset = 4
-                    local behindPos = npcCFrame.Position - npcCFrame.LookVector * behindOffset
-                    behindPos = Vector3.new(behindPos.X, npcPart.Position.Y + 1, behindPos.Z)
+                    local behindPos = targetCFrame.Position - targetCFrame.LookVector * behindOffset
+                    behindPos = Vector3.new(behindPos.X, targetPart.Position.Y + 1, behindPos.Z)
 
                     -- Bay mượt đến vị trí sau lưng
                     smoothFlyTo(behindPos, 0.2)
                     -- Xoay người nhìn về mục tiêu
-                    hrp.CFrame = CFrame.lookAt(hrp.Position, npcPart.Position)
+                    hrp.CFrame = CFrame.lookAt(hrp.Position, targetPart.Position)
 
                     -- Đánh liên tục (giới hạn tần suất)
                     local now = tick()
@@ -1545,5 +1587,5 @@ RaidTab:CreateToggle({
 
 RaidTab:CreateParagraph({
     Title = "📌 HƯỚNG DẪN",
-    Content = "1. Chọn chế độ và bấm 'Áp dụng chế độ'.\n2. Bấm 'Bắt đầu RAID' để vào trận.\n3. Chọn vị trí an toàn bằng các nút ở trên (Map 1, 2, 3, Map Boss, Triệu hồi boss, hoặc lưu vị trí hiện tại).\n4. Bật 'Auto RAID' để bay mượt liên tục bám theo NPC/Boss, đánh đến chết rồi tự chuyển.\n5. Khi hết quái, tự bay về vị trí an toàn và chờ đợt mới. NoClip chỉ bật khi có mục tiêu, tắt khi hết để không bị té."
+    Content = "1. Chọn chế độ và bấm 'Áp dụng chế độ'.\n2. Bấm 'Bắt đầu RAID' để vào trận.\n3. Chọn vị trí an toàn bằng các nút ở trên.\n4. Bật 'Auto RAID' để bay mượt liên tục, đánh quái thường trước, boss sau.\n5. Khi hết quái, tự bay về vị trí an toàn và chờ đợt mới. NoClip chỉ bật khi có mục tiêu."
 })
