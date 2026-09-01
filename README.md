@@ -3,7 +3,7 @@ local Rayfield = loadstring(game:HttpGet('https://sirius.menu/rayfield'))()
 
 -- [[ CỬA SỔ CHÍNH ]]
 local Window = Rayfield:CreateWindow({
-   Name = "🧠 Brainrot Hub v7.0",
+   Name = "🧠 Brainrot Hub v7.8",
    Icon = 0,
    LoadingTitle = "Đang tải...",
    LoadingSubtitle = "by Assistant",
@@ -16,6 +16,7 @@ local Window = Rayfield:CreateWindow({
 local TweenService = game:GetService("TweenService")
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
 local player = Players.LocalPlayer
 
 -- STATE
@@ -32,6 +33,7 @@ local _G_IsTeleporting = false
 local _G_AutoBuyTokens = false
 local _G_AutoFarmEvent = false
 local _G_AutoFarmEvent2 = false
+local _G_AutoAttackOnly = false   -- dùng cho auto đánh thường
 
 -- HÀM TIỆN
 local function setToggleState(flag, value)
@@ -97,6 +99,24 @@ local function triggerLuckyBlock()
         luckyRemote:FireServer({ state = "rouletteStart", duration = 3 })
     end)
     return true
+end
+
+-- HÀM TÌM NPC (CHỈ CẦN KIỂM TRA TỒN TẠI)
+local function findAnyNPC()
+    local char = getCharacter()
+    if not char then return nil end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return nil end
+    for _, v in pairs(Workspace:GetDescendants()) do
+        if v:IsA("Model") and v:FindFirstChild("HumanoidRootPart") then
+            local name = v.Name:lower()
+            if name:find("npc") or name:find("enemy") or name:find("boss") or 
+               name:find("evil") or name:find("tung") or name:find("burn") then
+                return v
+            end
+        end
+    end
+    return nil
 end
 
 -- ============================
@@ -747,9 +767,113 @@ SpinTab:CreateToggle({
     end
 })
 
+SpinTab:CreateToggle({
+    Name = "📝 Nhập code",
+    CurrentValue = false,
+    Flag = "ToggleRedeemCode",
+    Callback = function(Value)
+        if Value then
+            task.spawn(function()
+                local Remotes = getRemotes()
+                
+                local PlayerSettings = Remotes:FindFirstChild("PlayerSettings")
+                local RedeemCode = Remotes:FindFirstChild("RedeemCode")
+                local SeasonPassAction = Remotes:FindFirstChild("SeasonPassAction")
+                
+                if not PlayerSettings or not RedeemCode or not SeasonPassAction then
+                    Rayfield:Notify({Title = "❌", Content = "Thiếu remote cần thiết!", Duration = 4})
+                    setToggleState("ToggleRedeemCode", false)
+                    return
+                end
+
+                local success, err = pcall(function()
+                    PlayerSettings:InvokeServer("get")
+                end)
+                if not success then
+                    Rayfield:Notify({Title = "❌", Content = "Lỗi PlayerSettings: " .. tostring(err), Duration = 3})
+                    setToggleState("ToggleRedeemCode", false)
+                    return
+                end
+                Rayfield:Notify({Title = "📤", Content = "Đã gửi PlayerSettings - đợi 1s", Duration = 2})
+                task.wait(1)
+
+                pcall(function()
+                    RedeemCode:InvokeServer("3MILLY")
+                end)
+                Rayfield:Notify({Title = "📤", Content = "Đã gửi RedeemCode - đợi 3s", Duration = 2})
+                task.wait(3)
+
+                pcall(function()
+                    SeasonPassAction:InvokeServer({ action = "state" })
+                end)
+                Rayfield:Notify({Title = "📤", Content = "Đã gửi SeasonPass state - đợi 1s", Duration = 2})
+                task.wait(1)
+
+                pcall(function()
+                    SeasonPassAction:InvokeServer({ action = "openTitanChest" })
+                end)
+                Rayfield:Notify({Title = "✅", Content = "Đã nhập code và mở rương thành công!", Duration = 4})
+
+                setToggleState("ToggleRedeemCode", false)
+            end)
+        end
+    end
+})
+
+SpinTab:CreateToggle({
+    Name = "📅 Nhận thưởng hàng ngày",
+    CurrentValue = false,
+    Flag = "ToggleDailyReward",
+    Callback = function(Value)
+        if Value then
+            task.spawn(function()
+                local Remotes = getRemotes()
+                
+                local GetDailyRewards = Remotes:FindFirstChild("GetDailyRewards")
+                local ClaimDailyReward = Remotes:FindFirstChild("ClaimDailyReward")
+                
+                if not GetDailyRewards or not ClaimDailyReward then
+                    Rayfield:Notify({Title = "❌", Content = "Thiếu remote Daily Rewards!", Duration = 4})
+                    setToggleState("ToggleDailyReward", false)
+                    return
+                end
+
+                local success, err = pcall(function()
+                    GetDailyRewards:InvokeServer()
+                end)
+                if not success then
+                    Rayfield:Notify({Title = "❌", Content = "Lỗi GetDailyRewards: " .. tostring(err), Duration = 3})
+                    setToggleState("ToggleDailyReward", false)
+                    return
+                end
+                Rayfield:Notify({Title = "📤", Content = "Đã lấy danh sách thưởng - đợi 3s", Duration = 2})
+                task.wait(3)
+
+                local claimedCount = 0
+                for i = 1, 7 do
+                    if not _G_AutoFarmEvent then break end
+                    local claimSuccess = pcall(function()
+                        ClaimDailyReward:InvokeServer(i)
+                    end)
+                    if claimSuccess then
+                        claimedCount = claimedCount + 1
+                        Rayfield:Notify({Title = "✅", Content = "Đã nhận ô " .. i .. "/7", Duration = 2})
+                    else
+                        Rayfield:Notify({Title = "⚠️", Content = "Lỗi nhận ô " .. i, Duration = 2})
+                    end
+                    task.wait(1.5)
+                end
+
+                Rayfield:Notify({Title = "🎉", Content = "Đã nhận " .. claimedCount .. "/7 ô thưởng!", Duration = 4})
+                setToggleState("ToggleDailyReward", false)
+            end)
+        end
+    end
+})
+
 SpinTab:CreateParagraph({
     Title = "📌 HƯỚNG DẪN",
-    Content = "• 'Quay vòng quay' – bay đến vị trí và thực hiện quay miễn phí (1 lần/ngày)\n• 'Lấy Brainrot Free' – bay đến vị trí và gửi lệnh nhận Brainrot\n⚠️ Cần phải bấm tham gia nhóm mới nhận được Brainrot Free!"
+    Content = "• 'Quay vòng quay' – bay đến vị trí và thực hiện quay miễn phí (1 lần/ngày)\n• 'Lấy Brainrot Free' – bay đến vị trí và gửi lệnh nhận Brainrot\n⚠️ Cần tham gia nhóm mới nhận được Brainrot Free!\n• 'Nhập code' – chạy chuỗi remote: PlayerSettings → RedeemCode → SeasonPassAction (state + openTitanChest)\n• 'Nhận thưởng hàng ngày' – GetDailyRewards → Claim ô 1-7 (mỗi ô cách 1.5s)"
 })
 
 -- ============================
@@ -972,18 +1096,23 @@ TeleportTab:CreateParagraph({
 })
 
 -- ============================
--- TAB 8: EVENT (CẬP NHẬT)
+-- TAB 8: EVENT
 -- ============================
 local EventTab = Window:CreateTab("Event", 4483362458)
 
 local eventBuyTokensPos = Vector3.new(-33.3844643, -1.74115956, 476.667206)
+local eventClawPos = Vector3.new(-13.0710115, -1.69945204, 477.126282)
 
 local function flyToEventBuyTokens()
     flyTo(eventBuyTokensPos, 2.5)
     task.wait(0.3)
 end
 
--- ===== MUA TOKENS =====
+local function flyToEventClaw()
+    flyTo(eventClawPos, 2.5)
+    task.wait(0.3)
+end
+
 EventTab:CreateParagraph({
     Title = "🪙 MUA TOKENS",
     Content = "Bay đến vị trí và gửi remote mua tokens (cần thêm code)."
@@ -998,7 +1127,6 @@ EventTab:CreateToggle({
         if _G_AutoBuyTokens then
             task.spawn(function()
                 flyToEventBuyTokens()
-                -- TODO: Thêm remote mua tokens vào đây
                 Rayfield:Notify({Title = "⚠️", Content = "Chưa có remote mua Tokens!", Duration = 4})
                 setToggleState("ToggleBuyTokens", false)
             end)
@@ -1006,10 +1134,9 @@ EventTab:CreateToggle({
     end
 })
 
--- ===== CÀY EVENT 1 (CLAW MACHINE) =====
 EventTab:CreateParagraph({
     Title = "⚙️ CÀY EVENT 1 (CLAW MACHINE)",
-    Content = "Tự động thực hiện chuỗi: Start → Drop → OpenReward → Claim"
+    Content = "Tự động thực hiện chuỗi: Start → Drop (8s) → OpenReward → Claim"
 })
 
 EventTab:CreateToggle({
@@ -1028,8 +1155,9 @@ EventTab:CreateToggle({
                     return
                 end
 
+                flyToEventClaw()
+
                 while _G_AutoFarmEvent do
-                    -- Bước 1: Start
                     local success, err = pcall(function()
                         clawRemote:InvokeServer("Start")
                     end)
@@ -1039,33 +1167,26 @@ EventTab:CreateToggle({
                     end
                     Rayfield:Notify({Title = "▶️", Content = "Start - đợi 3s...", Duration = 2})
                     task.wait(3)
-
                     if not _G_AutoFarmEvent then break end
 
-                    -- Bước 2: Drop
                     pcall(function()
                         clawRemote:InvokeServer("Drop")
                     end)
-                    Rayfield:Notify({Title = "⬇️", Content = "Drop - đợi 5s...", Duration = 2})
-                    task.wait(5)
-
+                    Rayfield:Notify({Title = "⬇️", Content = "Drop - đợi 8s...", Duration = 2})
+                    task.wait(8)
                     if not _G_AutoFarmEvent then break end
 
-                    -- Bước 3: OpenReward
                     pcall(function()
                         clawRemote:InvokeServer("OpenReward")
                     end)
                     Rayfield:Notify({Title = "🎁", Content = "OpenReward - đợi 2s...", Duration = 2})
                     task.wait(2)
-
                     if not _G_AutoFarmEvent then break end
 
-                    -- Bước 4: Claim
                     pcall(function()
                         clawRemote:InvokeServer("Claim")
                     end)
                     Rayfield:Notify({Title = "✅", Content = "Claim thành công!", Duration = 2})
-
                     task.wait(1)
                 end
 
@@ -1078,7 +1199,6 @@ EventTab:CreateToggle({
     end
 })
 
--- ===== CÀY EVENT 2 (TRAIT MACHINE) =====
 EventTab:CreateParagraph({
     Title = "⚙️ CÀY EVENT 2 (TRAIT MACHINE)",
     Content = "Tự động thực hiện chuỗi: GetState (20s) → Roll (5s) → Return"
@@ -1101,7 +1221,6 @@ EventTab:CreateToggle({
                 end
 
                 while _G_AutoFarmEvent2 do
-                    -- Bước 1: GetState
                     local success, err = pcall(function()
                         traitRemote:InvokeServer("GetState")
                     end)
@@ -1111,24 +1230,19 @@ EventTab:CreateToggle({
                     end
                     Rayfield:Notify({Title = "⏳", Content = "GetState - đợi 20s để bỏ Brainrot vào...", Duration = 3})
                     task.wait(20)
-
                     if not _G_AutoFarmEvent2 then break end
 
-                    -- Bước 2: Roll
                     pcall(function()
                         traitRemote:InvokeServer("Roll")
                     end)
                     Rayfield:Notify({Title = "🎲", Content = "Roll - đợi 5s...", Duration = 2})
                     task.wait(5)
-
                     if not _G_AutoFarmEvent2 then break end
 
-                    -- Bước 3: Return
                     pcall(function()
                         traitRemote:InvokeServer("Return")
                     end)
                     Rayfield:Notify({Title = "✅", Content = "Return thành công!", Duration = 2})
-
                     task.wait(1)
                 end
 
@@ -1143,7 +1257,308 @@ EventTab:CreateToggle({
 
 EventTab:CreateParagraph({
     Title = "📌 HƯỚNG DẪN",
-    Content = "• 'Cày event 1' – ClawMachine: Start → Drop → OpenReward → Claim\n• 'Cày event 2' – TraitMachine: GetState (20s) → Roll (5s) → Return\n• Mỗi toggle hoạt động độc lập, có thể bật cùng lúc"
+    Content = "• 'Cày event 1' – ClawMachine: Start → Drop (8s) → OpenReward → Claim\n• 'Cày event 2' – TraitMachine: GetState (20s) → Roll (5s) → Return"
+})
+-- ============================
+-- TAB 9: RAID (CHIẾN ĐẤU + AUTO BAY ĐẾN NPC)
+-- ============================
+local RaidTab = Window:CreateTab("RAID", 4483362458)
+
+-- Vị trí bắt đầu RAID
+local raidStartPos = Vector3.new(-192.448151, 0.648801327, 531.327576)
+-- Vị trí dự phòng (khi không tìm thấy NPC)
+local fallbackPos = Vector3.new(-6.41163158, 16.9227524, -159.776367)
+
+local function flyToRaidStart()
+    flyTo(raidStartPos, 2.5)
+    task.wait(0.3)
+end
+
+local function flyToFallback()
+    flyTo(fallbackPos, 2.5)
+    task.wait(0.3)
+end
+
+-- Biến lưu số thứ tự NPC hiện tại (bắt đầu từ 1)
+local currentNPCIndex = 1
+
+-- Hàm tìm NPC Evil Tung Sahur theo số thứ tự
+local function findNPCByIndex(index)
+    local targetName = "Evil Tung Sahur_" .. index
+    for _, obj in pairs(Workspace:GetDescendants()) do
+        if obj:IsA("Model") and obj.Name == targetName and obj:FindFirstChild("HumanoidRootPart") then
+            return obj
+        end
+    end
+    return nil
+end
+
+-- HÀM BAY ĐẾN NPC (ĐÃ SỬA LỖI)
+local function flyToNPC(npcModel)
+    if not npcModel then return false end
+    local char = getCharacter()
+    if not char then return false end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    if not hrp then return false end
+    local npcHrp = npcModel:FindFirstChild("HumanoidRootPart")
+    if not npcHrp then return false end
+    
+    -- Bật Fly
+    local humanoid = char:FindFirstChild("Humanoid")
+    if humanoid then
+        humanoid:ChangeState(Enum.HumanoidStateType.Flying)
+    end
+
+    -- Điểm đích: phía trên NPC 3 unit
+    local targetPos = npcHrp.Position + Vector3.new(0, 3, 0)
+    
+    -- Dùng flyTo chung để bay
+    local success = flyTo(targetPos, 2.5)
+    if not success then
+        return false
+    end
+    task.wait(0.3)
+    
+    -- Kiểm tra xem đã đến gần chưa
+    local distance = (hrp.Position - targetPos).Magnitude
+    return distance < 10
+end
+
+-- Hàm đánh thường liên tục cho đến khi NPC chết
+local function attackUntilDead(npcModel)
+    if not npcModel then return false end
+    local Remotes = getRemotes()
+    local combatRemote = Remotes:FindFirstChild("DungeonCombatAction")
+    if not combatRemote then return false end
+
+    -- Bật noclip để bay xuyên địa hình
+    local noclipConnection
+    local char = getCharacter()
+    if char then
+        noclipConnection = RunService.Stepped:Connect(function()
+            if char then
+                for _, part in pairs(char:GetDescendants()) do
+                    if part:IsA("BasePart") then
+                        part.CanCollide = false
+                    end
+                end
+            end
+        end)
+    end
+
+    -- Đợi NPC còn tồn tại
+    while npcModel and npcModel.Parent and npcModel:FindFirstChild("HumanoidRootPart") do
+        pcall(function()
+            combatRemote:FireServer({ action = "attack", comboIndex = 1 })
+        end)
+        task.wait(0.1)
+    end
+
+    -- Tắt noclip
+    if noclipConnection then noclipConnection:Disconnect() end
+    return true
+end
+
+-- Biến điều khiển Auto RAID
+local isAutoRaidRunning = false
+
+-- ===== CHỌN CHẾ ĐỘ =====
+RaidTab:CreateParagraph({
+    Title = "🎯 CHỌN CHẾ ĐỘ",
+    Content = "Chọn độ khó cho RAID."
 })
 
-print("✅ Brainrot Hub v7.0 đã sẵn sàng!")
+local difficulties = {"Easy", "Normal", "Hard", "Insane", "Nightmare"}
+local selectedDifficulty = "Easy"
+
+RaidTab:CreateDropdown({
+    Name = "Chế độ",
+    Options = difficulties,
+    CurrentOption = "Easy",
+    Flag = "RaidDifficulty",
+    Callback = function(Value)
+        selectedDifficulty = Value
+        Rayfield:Notify({Title = "📌", Content = "Đã chọn: " .. Value, Duration = 2})
+    end
+})
+
+RaidTab:CreateButton({
+    Name = "✅ Áp dụng chế độ",
+    Callback = function()
+        task.spawn(function()
+            local Remotes = getRemotes()
+            local dungeonRemote = Remotes:FindFirstChild("DungeonAction")
+            if not dungeonRemote then
+                Rayfield:Notify({Title = "❌", Content = "Không tìm thấy DungeonAction!", Duration = 3})
+                return
+            end
+            local success, err = pcall(function()
+                dungeonRemote:InvokeServer({ action = "setDifficulty", difficulty = selectedDifficulty })
+            end)
+            if success then
+                Rayfield:Notify({Title = "✅", Content = "Đã chọn chế độ: " .. selectedDifficulty, Duration = 3})
+            else
+                Rayfield:Notify({Title = "❌", Content = "Lỗi: " .. tostring(err), Duration = 3})
+            end
+        end)
+    end
+})
+
+-- ===== ĐIỀU KHIỂN RAID =====
+RaidTab:CreateParagraph({
+    Title = "⚔️ ĐIỀU KHIỂN RAID",
+    Content = "Bắt đầu hoặc nhận thưởng."
+})
+
+RaidTab:CreateToggle({
+    Name = "⚔️ Bắt đầu RAID",
+    CurrentValue = false,
+    Flag = "ToggleStartRaid",
+    Callback = function(Value)
+        if Value then
+            task.spawn(function()
+                local Remotes = getRemotes()
+                local dungeonRemote = Remotes:FindFirstChild("DungeonAction")
+                if not dungeonRemote then
+                    Rayfield:Notify({Title = "❌", Content = "Không tìm thấy DungeonAction!", Duration = 3})
+                    setToggleState("ToggleStartRaid", false)
+                    return
+                end
+                flyToRaidStart()
+                local success, err = pcall(function()
+                    dungeonRemote:InvokeServer({ action = "start" })
+                end)
+                if success then
+                    Rayfield:Notify({Title = "⚔️", Content = "Đã bắt đầu RAID!", Duration = 3})
+                else
+                    Rayfield:Notify({Title = "❌", Content = "Lỗi: " .. tostring(err), Duration = 3})
+                end
+                setToggleState("ToggleStartRaid", false)
+            end)
+        end
+    end
+})
+
+RaidTab:CreateButton({
+    Name = "🎁 Nhận thưởng RAID",
+    Callback = function()
+        task.spawn(function()
+            local Remotes = getRemotes()
+            local dungeonRemote = Remotes:FindFirstChild("DungeonAction")
+            if not dungeonRemote then
+                Rayfield:Notify({Title = "❌", Content = "Không tìm thấy DungeonAction!", Duration = 3})
+                return
+            end
+            local success, err = pcall(function()
+                dungeonRemote:InvokeServer({ action = "claim" })
+            end)
+            if success then
+                Rayfield:Notify({Title = "🎁", Content = "Đã nhận thưởng RAID!", Duration = 3})
+            else
+                Rayfield:Notify({Title = "❌", Content = "Lỗi: " .. tostring(err), Duration = 3})
+            end
+        end)
+    end
+})
+
+-- ===== AUTO RAID (BAY + ĐÁNH LIÊN TỤC THEO TỪNG NPC) =====
+RaidTab:CreateParagraph({
+    Title = "🤖 AUTO RAID",
+    Content = "Tự động bay đến từng con Evil Tung Sahur_x, đánh cho đến khi chết, chuyển sang con tiếp theo."
+})
+
+RaidTab:CreateToggle({
+    Name = "🤖 Bật Auto RAID",
+    CurrentValue = false,
+    Flag = "ToggleAutoRaid",
+    Callback = function(Value)
+        isAutoRaidRunning = Value
+        if isAutoRaidRunning then
+            task.spawn(function()
+                -- Reset chỉ số NPC về 1
+                currentNPCIndex = 1
+                -- Lấy remote combat
+                local Remotes = getRemotes()
+                local combatRemote = Remotes:FindFirstChild("DungeonCombatAction")
+                if not combatRemote then
+                    Rayfield:Notify({Title = "❌", Content = "Không tìm thấy DungeonCombatAction!", Duration = 4})
+                    setToggleState("ToggleAutoRaid", false)
+                    isAutoRaidRunning = false
+                    return
+                end
+
+                -- Vòng lặp chính
+                while isAutoRaidRunning do
+                    -- Tìm NPC hiện tại
+                    local npc = findNPCByIndex(currentNPCIndex)
+                    if not npc then
+                        -- Không tìm thấy NPC => thử tăng index lên 1
+                        currentNPCIndex = currentNPCIndex + 1
+                        npc = findNPCByIndex(currentNPCIndex)
+                        if not npc then
+                            -- Vẫn không tìm thấy => quay về vị trí dự phòng, reset index
+                            Rayfield:Notify({Title = "⚠️", Content = "Không tìm thấy NPC nào, quay về vị trí dự phòng...", Duration = 3})
+                            flyToFallback()
+                            task.wait(5)
+                            currentNPCIndex = 1
+                            continue
+                        end
+                    end
+
+                    -- Bay đến NPC
+                    local flySuccess = flyToNPC(npc)
+                    if not flySuccess then
+                        -- Bay thất bại, chuyển sang NPC tiếp theo
+                        Rayfield:Notify({Title = "⚠️", Content = "Bay đến " .. npc.Name .. " thất bại, bỏ qua.", Duration = 2})
+                        currentNPCIndex = currentNPCIndex + 1
+                        continue
+                    end
+
+                    -- Đánh cho đến khi NPC chết
+                    Rayfield:Notify({Title = "⚔️", Content = "Đang đánh " .. npc.Name .. "...", Duration = 2})
+                    local attackSuccess = attackUntilDead(npc)
+                    if attackSuccess then
+                        Rayfield:Notify({Title = "✅", Content = npc.Name .. " đã bị tiêu diệt!", Duration = 2})
+                    else
+                        Rayfield:Notify({Title = "⚠️", Content = "Lỗi khi đánh " .. npc.Name, Duration = 2})
+                    end
+
+                    -- Chuyển sang NPC tiếp theo
+                    currentNPCIndex = currentNPCIndex + 1
+                    task.wait(0.5)
+                end
+
+                -- Khi tắt toggle
+                if not isAutoRaidRunning then
+                    setToggleState("ToggleAutoRaid", false)
+                    Rayfield:Notify({Title = "⏹️", Content = "Đã dừng Auto RAID!", Duration = 3})
+                end
+            end)
+        end
+    end
+})
+
+-- Nút reset NPC index về 1
+RaidTab:CreateButton({
+    Name = "🔄 Reset NPC index về 1",
+    Callback = function()
+        currentNPCIndex = 1
+        Rayfield:Notify({Title = "🔄", Content = "Đã reset về NPC số 1", Duration = 2})
+    end
+})
+
+-- Nút bay đến vị trí dự phòng (thủ công)
+RaidTab:CreateButton({
+    Name = "✈️ Bay đến vị trí dự phòng",
+    Callback = function()
+        task.spawn(function()
+            flyToFallback()
+            Rayfield:Notify({Title = "📍", Content = "Đã bay đến vị trí dự phòng!", Duration = 3})
+        end)
+    end
+})
+
+RaidTab:CreateParagraph({
+    Title = "📌 HƯỚNG DẪN",
+    Content = "1. Chọn chế độ và bấm 'Áp dụng chế độ'.\n2. Bấm 'Bắt đầu RAID' để vào trận.\n3. Bật 'Auto RAID' để tự động bay đến từng NPC Evil Tung Sahur_x và đánh cho đến khi chết.\n4. Khi một NPC chết, tự động chuyển sang NPC tiếp theo.\n5. Nếu không tìm thấy NPC, quay về vị trí dự phòng và reset về NPC số 1.\n6. Sau khi thắng, bấm 'Nhận thưởng RAID'."
+})
